@@ -43,8 +43,7 @@ export const TCPProvider: FC<{children: React.ReactNode}> = ({children}) => {
   const [totalReceivedBytes, setTotalReceivedBytes] = useState<number>(0);
   const [serverSocket, setServerSocket] = useState<any>(null);
 
-  const {currentChunkSet, setCurrentChunkSet, setChunkStore} =
-    useChunkStore();
+  const {currentChunkSet, setCurrentChunkSet, setChunkStore} = useChunkStore();
 
   //START SERVER
   const startServer = useCallback(
@@ -61,51 +60,68 @@ export const TCPProvider: FC<{children: React.ReactNode}> = ({children}) => {
         socket.readableHighWaterMark = 1024 * 1024 * 1;
         socket.writableHighWaterMark = 1024 * 1024 * 1;
 
-        socket.on('data', async(data)=>{
+        socket.on('data', async data => {
+          const parsedData = JSON.parse(data?.toString());
+          if (parsedData?.event === 'connect') {
+            setIsConnected(true);
+            setConnectedDevice(parsedData?.deviceName);
+          }
+        });
 
-        })
+        socket.on('close', () => {
+          console.log('Client disconnected');
+          setReceviedFiles([]);
+          setSentFiles([]);
+          setCurrentChunkSet(null);
+          setChunkStore(null);
+          setTotalReceivedBytes(0);
+          setIsConnected(false);
+        });
 
-        socket.on('close',()=>{
-            console.log('Client disconnected');
-            setReceviedFiles([])
-            setSentFiles([])
-            setCurrentChunkSet(null)
-            setChunkStore(null)
-            setTotalReceivedBytes(0)
-            setIsConnected(false)
-        })
-
-        socket.on('error',(err)=>{
-            console.log('Error occurred', err);
-        })
+        socket.on('error', err => {
+          console.log('Error occurred', err);
+        });
       });
 
-      newServer.listen({port,host:'0.0.0.0'},()=>{
+      newServer.listen({port, host: '0.0.0.0'}, () => {
         const address = newServer.address();
         console.log(`Server running on ${address?.address}:${address?.port}`);
-      })
+      });
 
-      newServer.on('error',(err)=>{
+      newServer.on('error', err => {
         console.log('Error occurred', err);
-      })
+      });
 
       setServer(newServer);
     },
     [server],
   );
 
-  const connectToServer = useCallback((host:string, port:number, deviceName:string)=>{
-    const newClient = TcpSocket.connectTLS({
-        host,
-        port,
-        cert:true,
-        ca:require('../../tls_certs/server-cert.pem')
-    },()=>{
-        setIsConnected(true);
-        setConnectedDevice(deviceName);
-        const myDeviceName= DeviceInfo.getDeviceNameSync();
-    })
-  },[client])
+  const connectToServer = useCallback(
+    (host: string, port: number, deviceName: string) => {
+      const newClient = TcpSocket.connectTLS(
+        {
+          host,
+          port,
+          cert: true,
+          ca: require('../../tls_certs/server-cert.pem'),
+        },
+        () => {
+          setIsConnected(true);
+          setConnectedDevice(deviceName);
+          const myDeviceName = DeviceInfo.getDeviceNameSync();
+          newClient.write(
+            JSON.stringify({event: 'connect', deviceName: myDeviceName}),
+          );
+        },
+      );
+
+      newClient.setNoDelay(true);
+      newClient.readableHighWaterMark = 1024 * 1024 * 1;
+      newClient.writableHighWaterMark = 1024 * 1024 * 1;
+    },
+    [client],
+  );
 
   return (
     <TCPContext.Provider
@@ -119,6 +135,7 @@ export const TCPProvider: FC<{children: React.ReactNode}> = ({children}) => {
         totalSentBytes,
         totalReceivedBytes,
         startServer,
+        connectToServer,
       }}>
       {children}
     </TCPContext.Provider>
