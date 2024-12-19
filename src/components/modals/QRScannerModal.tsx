@@ -19,6 +19,8 @@ import Animated, {
   withRepeat,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTCP } from '../../services/TCPProvider';
+import { navigate } from '../../utils/NavigationUtil';
 
 interface ModalProps {
   visible: boolean;
@@ -26,6 +28,7 @@ interface ModalProps {
 }
 
 const QRScannerModal: FC<ModalProps> = ({visible, onClose}) => {
+  const {isConnected, connectToServer}=useTCP();
   const [loading, setLoading] = useState(true);
 
   const [codeFound, setCodeFound] = useState(false);
@@ -64,6 +67,7 @@ const QRScannerModal: FC<ModalProps> = ({visible, onClose}) => {
     const [connectionData, deviceName] = data.replace('tcp://','').split('|');
     const [host,port] = connectionData?.split(':');
     //connectToServer
+    connectToServer(host, parseInt(port, 10), deviceName)
   }
 
   const codeScanner = useMemo<CodeScanner>(()=>({
@@ -82,6 +86,13 @@ const QRScannerModal: FC<ModalProps> = ({visible, onClose}) => {
     }
 
   }),[codeFound]);
+
+  useEffect(()=>{
+    if(isConnected){
+      onClose();
+      navigate('ConnectionScreen');
+    }
+  },[isConnected])
 
   return (
     <Modal

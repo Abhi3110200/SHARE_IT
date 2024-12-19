@@ -4,6 +4,9 @@ import { optionStyles } from '../../styles/optionsStyles';
 import Icon from '../global/Icon';
 import { Colors } from '../../utils/Constants';
 import CustomText from '../global/CustomText';
+import { useTCP } from '../../services/TCPProvider';
+import { navigate } from '../../utils/NavigationUtil';
+import { pickImage } from '../../utils/libraryHelpers';
 
 const Options: FC<{
   isHome?: boolean;
@@ -12,8 +15,21 @@ const Options: FC<{
 }> = ({isHome, onMediaPickedUp, onFilePickedUp}) => {
 
 
-    const handleUniversalPicker = async(type:string)=>{
+  const {isConnected} = useTCP();
 
+    const handleUniversalPicker = async(type:string)=>{
+      if(isHome){
+        if(isConnected){
+          navigate('ConnectionScreen');
+        }else{
+          navigate('SendScreen');
+        }
+        return
+      }
+
+      if(type==='image' && onMediaPickedUp){
+        pickImage(onMediaPickedUp);
+      }
     }
 
 

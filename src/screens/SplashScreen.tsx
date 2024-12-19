@@ -1,11 +1,11 @@
 import {Image, StyleSheet, Text, View} from 'react-native';
 import React, {FC, useEffect} from 'react';
-import {navigate} from '../utils/NavigationUtil';
+import { resetAndNavigate} from '../utils/NavigationUtil';
 import {commonStyles} from '../styles/commonStyles';
 
 const SplashScreen: FC = () => {
   const navigateToHome = () => {
-    navigate('HomeScreen');
+    resetAndNavigate('HomeScreen');
   };
 
   useEffect(()=>{

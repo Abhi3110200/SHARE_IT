@@ -22,6 +22,9 @@ import Animated, {
 import LinearGradient from 'react-native-linear-gradient';
 import { multiColor } from '../../utils/Constants';
 import DeviceInfo from 'react-native-device-info';
+import { useTCP } from '../../services/TCPProvider';
+import { navigate } from '../../utils/NavigationUtil';
+import { getLocalIPAddress } from '../../utils/networkUtils';
 
 interface ModalProps {
   visible: boolean;
@@ -30,6 +33,7 @@ interface ModalProps {
 
 const QRGenerateModal: FC<ModalProps> = ({visible, onClose}) => {
   const [loading, setLoading] = useState(true);
+  const {isConnected, server, startServer} = useTCP();
 
   const [qrValue, setQRValue] = useState('Abhijeet');
   const shimmerTranslateX = useSharedValue(-300);
@@ -41,7 +45,13 @@ const QRGenerateModal: FC<ModalProps> = ({visible, onClose}) => {
 
   const setUpServer = async()=>{
     const deviceName = await DeviceInfo.getDeviceName();
-
+    if(server){
+      const ip =await getLocalIPAddress();
+      const port = 4000;
+      setQRValue(`tcp://${ip}:${port}|${deviceName}`);
+      setLoading(false);
+      return;
+    }
     setLoading(false);
   }
 
@@ -56,7 +66,16 @@ const QRGenerateModal: FC<ModalProps> = ({visible, onClose}) => {
         setLoading(true);
         setUpServer();
     }
-  }, [visible,shimmerTranslateX]);
+  }, [visible]);
+
+  useEffect(()=>{
+    console.log("TCP Provider")
+    if(isConnected){
+      onClose();
+      navigate('ConnectionScreen');
+    }
+
+  },[isConnected])
 
   return (
     <Modal
